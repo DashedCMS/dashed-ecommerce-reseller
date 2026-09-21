@@ -1,0 +1,44 @@
+{
+    "name": "dashed/dashed-ecommerce-reseller",
+    "description": "Afnemers-API voor Dashed CMS: assortimenten, prijzen en voorraad voor zakelijke afnemers",
+    "keywords": [
+        "Dashed",
+        "laravel",
+        "dashed-ecommerce-reseller",
+        "reseller",
+        "api"
+    ],
+    "homepage": "https://github.com/DashedCMS/dashed-ecommerce-reseller",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Robin van Maasakker",
+            "email": "robin@dashed.nl",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": "^8.4",
+        "dashed/dashed-core": "^4.71",
+        "dashed/dashed-ecommerce-core": "*",
+        "spatie/laravel-package-tools": "^1.16"
+    },
+    "conflict": {
+        "dashed/dashed-mobile-api": "<4.14.0",
+        "dashed/dashed-ecommerce-core": "<4.136.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Dashed\\DashedEcommerceReseller\\": "src"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Dashed\\DashedEcommerceReseller\\DashedEcommerceResellerServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}
