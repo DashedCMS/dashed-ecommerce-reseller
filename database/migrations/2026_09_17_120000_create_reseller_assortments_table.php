@@ -27,8 +27,9 @@ return new class () extends Migration {
             $table->string('mode', 10);
             $table->timestamps();
 
-            // Een doel is opgenomen of uitgesloten, niet allebei.
-            $table->unique(['assortment_id', 'type', 'target_id']);
+            // Een doel is opgenomen of uitgesloten, niet allebei. Eigen naam:
+            // de afgeleide is 69 tekens en MySQL staat er 64 toe.
+            $table->unique(['assortment_id', 'type', 'target_id'], 'reseller_rules_target_unique');
         });
     }
 
