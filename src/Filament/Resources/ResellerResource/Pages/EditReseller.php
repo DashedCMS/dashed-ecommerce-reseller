@@ -2,12 +2,20 @@
 
 namespace Dashed\DashedEcommerceReseller\Filament\Resources\ResellerResource\Pages;
 
+use Throwable;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Illuminate\Support\HtmlString;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Toggle;
+use Illuminate\Support\Facades\Mail;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
+use Dashed\DashedEcommerceReseller\Mail\ResellerSetupMail;
+use Dashed\DashedEcommerceReseller\Setup\SetupInstructions;
+use Dashed\DashedEcommerceReseller\Feeds\ResellerFeedWriter;
+use Dashed\DashedEcommerceReseller\Models\ResellerProfile;
 use Dashed\DashedEcommerceReseller\Webhooks\ResellerWebhooks;
 use Dashed\DashedEcommerceReseller\Filament\Resources\ResellerResource;
 
@@ -30,6 +38,97 @@ class EditReseller extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
+            Action::make('sendSetupMail')
+                ->label(__('Installatiemail sturen'))
+                ->icon('heroicon-o-envelope')
+                ->visible(fn (): bool => $this->record->isActive())
+                ->schema([
+                    TextInput::make('email')
+                        ->label(__('Ontvanger'))
+                        ->helperText(__('Bijvoorbeeld de afnemer zelf, of zijn webbouwer.'))
+                        ->email()
+                        ->required()
+                        ->default(fn (): ?string => $this->record->user?->email),
+                    Select::make('platform')
+                        ->label(__('Platform van de afnemer'))
+                        ->options(SetupInstructions::platformOptions())
+                        ->default('shopify')
+                        ->required(),
+                    Toggle::make('with_api_key')
+                        ->label(__('Nieuwe API-sleutel meesturen'))
+                        ->helperText(__('Alleen nodig voor een eigen developer. Er wordt een nieuwe sleutel gemaakt; bestaande sleutels blijven werken.'))
+                        ->default(false),
+                ])
+                ->action(function (array $data): void {
+                    // De eerste koppeling van een afnemer mag nooit tegen de 503
+                    // van de feedroute aanlopen: hier zit geen token in de
+                    // request-URL (dit is een beheerderssessie, geen publieke
+                    // route), dus een fout mag gewoon gerapporteerd worden.
+                    // ResellerFeedWriter::write() schrijft altijd beide
+                    // formaten, dus één ontbrekend bestand is genoeg reden om
+                    // ze allebei opnieuw te maken.
+                    $ontbreekt = collect(ResellerProfile::FEED_FORMATS)
+                        ->contains(fn (string $format): bool => $this->record->feedGeneratedAt($format) === null);
+
+                    if ($ontbreekt) {
+                        try {
+                            app(ResellerFeedWriter::class)->write($this->record);
+                        } catch (Throwable $e) {
+                            report($e);
+
+                            Notification::make()
+                                ->title(__('De feeds konden niet worden aangemaakt; de mail is niet verstuurd.'))
+                                ->danger()
+                                ->send();
+
+                            return;
+                        }
+                    }
+
+                    $token = $data['with_api_key']
+                        ? $this->record->createToken(__('Installatiemail :datum', ['datum' => now()->format('d-m-Y')]))
+                        : null;
+
+                    try {
+                        Mail::to($data['email'])->send(new ResellerSetupMail($this->record, $data['platform'], $token?->plainTextToken));
+                    } catch (Throwable $e) {
+                        report($e);
+
+                        // Een sleutel die nooit is verstuurd mag niet blijven
+                        // hangen: de afnemer heeft hem niet gezien en kan hem
+                        // dus ook niet gebruiken, en anders zou hij als
+                        // vergeten, ongebruikte sleutel op de afnemer blijven
+                        // staan.
+                        $token?->accessToken->delete();
+
+                        Notification::make()
+                            ->title(__('De mail kon niet worden verstuurd.'))
+                            ->danger()
+                            ->send();
+
+                        return;
+                    }
+
+                    rescue(fn () => activity()
+                        ->performedOn($this->record)
+                        ->withProperties(['email' => $data['email'], 'platform' => $data['platform'], 'with_api_key' => (bool) $data['with_api_key']])
+                        ->log('reseller:setup-mail-sent'), report: false);
+
+                    Notification::make()->title(__('Installatiemail verstuurd'))->success()->send();
+                }),
+            Action::make('newFeedToken')
+                ->label(__('Nieuwe feedsleutel'))
+                ->icon('heroicon-o-arrow-path')
+                ->color('gray')
+                ->requiresConfirmation()
+                ->modalDescription(__('De oude links werken meteen niet meer. De afnemer moet de nieuwe link in Matrixify of WP All Import zetten.'))
+                ->action(function (): void {
+                    // Geen nieuwe generatie inplannen: de bestanden staan per
+                    // profiel-id opgeslagen, niet per token, dus ze blijven
+                    // onder de nieuwe link gewoon geldig.
+                    $this->record->regenerateFeedToken();
+                    Notification::make()->title(__('Nieuwe feedsleutel gemaakt'))->success()->send();
+                }),
             Action::make('createKey')
                 ->label(__('Nieuwe sleutel'))
                 ->icon('heroicon-o-key')

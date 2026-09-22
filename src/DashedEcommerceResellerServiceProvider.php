@@ -30,12 +30,13 @@ class DashedEcommerceResellerServiceProvider extends PackageServiceProvider
                 '2026_09_17_120100_create_reseller_profiles_table',
                 '2026_09_17_120200_create_reseller_catalog_items_table',
                 '2026_09_17_120300_create_reseller_api_logs_table',
+                '2026_09_22_120000_add_feed_token_to_reseller_profiles_table',
             ])
             ->runsMigrations()
             ->hasConfigFile()
             ->hasViews('dashed-ecommerce-reseller')
             ->hasCommand(\Dashed\DashedEcommerceReseller\Commands\ReconcileResellerCatalogCommand::class)
-            ->hasRoute('reseller-api');
+            ->hasRoutes(['reseller-api', 'reseller-feed']);
     }
 
     public function packageBooted(): void
@@ -110,7 +111,21 @@ class DashedEcommerceResellerServiceProvider extends PackageServiceProvider
                 __('Per API-sleutel per minuut. Standaard 300.'),
                 by: 'token',
             );
+
+            \Dashed\DashedCore\Classes\RateLimits::extend(
+                'dashed-reseller-feed',
+                'rate_limit_reseller_feed',
+                (int) config('dashed-ecommerce-reseller.feeds.rate_limit_default', 60),
+                __('Afnemersfeeds'),
+                __('Ophalingen van een Shopify- of WooCommerce-feed per IP-adres per minuut. Standaard 60.'),
+            );
         }
+
+        // De sleutel zit in het pad, niet achter een querystring of header;
+        // zoekmachines mogen deze feeds dus nooit indexeren of volgen.
+        cms()->builder(\Dashed\DashedCore\Classes\RobotsTxtBuilder::BUILDER, [
+            '/reseller-feed/',
+        ]);
 
         $handler = $this->app->make(\Illuminate\Contracts\Debug\ExceptionHandler::class);
 
@@ -125,6 +140,13 @@ class DashedEcommerceResellerServiceProvider extends PackageServiceProvider
         }
 
         self::registreerBewaartermijnen();
+
+        // De mailable meldt zich aan bij het sjablonenregister, zodat de
+        // beheerder onderwerp en blokken kan aanpassen zoals bij elke
+        // andere systeemmail.
+        if (method_exists(cms(), 'registerMailable')) {
+            cms()->registerMailable(\Dashed\DashedEcommerceReseller\Mail\ResellerSetupMail::class);
+        }
 
         if (method_exists(cms(), 'registerIntegration')) {
             cms()->registerIntegration([

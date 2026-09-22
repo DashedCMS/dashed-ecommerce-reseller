@@ -7,6 +7,7 @@ use Dashed\DashedCore\Models\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Dashed\DashedEcommerceCore\Models\Product;
+use Dashed\DashedEcommerceReseller\Jobs\GenerateResellerFeedsJob;
 use Dashed\DashedEcommerceReseller\Models\CatalogItem;
 use Dashed\DashedEcommerceReseller\Models\ResellerProfile;
 use Dashed\DashedEcommerceReseller\Webhooks\ResellerWebhooks;
@@ -37,8 +38,14 @@ class ResellerCatalogSync
         }
 
         foreach ($this->activeProfiles() as $profile) {
+            $changed = false;
+
             foreach (array_chunk($productIds, $this->chunkSize()) as $chunk) {
-                $this->syncChunk($profile, $chunk);
+                $changed = $this->syncChunk($profile, $chunk) || $changed;
+            }
+
+            if ($changed) {
+                GenerateResellerFeedsJob::dispatchFor($profile);
             }
         }
     }
@@ -52,12 +59,13 @@ class ResellerCatalogSync
         }
 
         $seen = [];
+        $changed = false;
 
         $profile->assortment->productQuery()
             ->select('dashed__products.id')
-            ->chunkById($this->chunkSize(), function (Collection $rows) use ($profile, &$seen) {
+            ->chunkById($this->chunkSize(), function (Collection $rows) use ($profile, &$seen, &$changed) {
                 $ids = $rows->pluck('id')->map(fn ($id) => (int) $id)->all();
-                $this->syncChunk($profile, $ids);
+                $changed = $this->syncChunk($profile, $ids) || $changed;
 
                 foreach ($ids as $id) {
                     $seen[$id] = true;
@@ -74,7 +82,11 @@ class ResellerCatalogSync
             ->all();
 
         foreach (array_chunk($gone, $this->chunkSize()) as $chunk) {
-            $this->syncChunk($profile, $chunk);
+            $changed = $this->syncChunk($profile, $chunk) || $changed;
+        }
+
+        if ($changed) {
+            GenerateResellerFeedsJob::dispatchFor($profile);
         }
     }
 
@@ -118,9 +130,10 @@ class ResellerCatalogSync
     /**
      * @param  list<int>  $productIds
      */
-    private function syncChunk(ResellerProfile $profile, array $productIds): void
+    private function syncChunk(ResellerProfile $profile, array $productIds): bool
     {
         $locales = $profile->locales();
+        $changed = false;
 
         $products = $profile->assortment->productQuery()
             ->whereIn('dashed__products.id', $productIds)
@@ -140,9 +153,9 @@ class ResellerCatalogSync
                 $item = $items->get($productId);
 
                 if ($product !== null) {
-                    $this->upsert($profile, $product, $item, $locales);
+                    $changed = $this->upsert($profile, $product, $item, $locales) || $changed;
                 } elseif ($item !== null && $item->removed_at === null) {
-                    $this->markRemoved($profile, $item);
+                    $changed = $this->markRemoved($profile, $item) || $changed;
                 }
             } catch (Throwable $e) {
                 // Eén kapot product mag de rest van de portie niet
@@ -150,15 +163,17 @@ class ResellerCatalogSync
                 report($e);
             }
         }
+
+        return $changed;
     }
 
-    private function upsert(ResellerProfile $profile, Product $product, ?CatalogItem $item, array $locales): void
+    private function upsert(ResellerProfile $profile, Product $product, ?CatalogItem $item, array $locales): bool
     {
         $payload = $this->presenter->present($product, $profile, $locales);
         $fingerprint = Fingerprint::of($payload);
 
         if ($item !== null && $item->removed_at === null && $item->fingerprint === $fingerprint) {
-            return;
+            return false;
         }
 
         $item ??= new CatalogItem(['user_id' => $profile->user_id, 'product_id' => $product->id]);
@@ -167,18 +182,36 @@ class ResellerCatalogSync
         $payload['removed'] = false;
         $payload['changed_at'] = $item->changed_at->toIso8601String();
 
-        ResellerWebhooks::notify($profile, ResellerWebhooks::EVENT_UPDATED, $payload);
+        try {
+            // De catalogus is al bijgewerkt en telt als veranderd zodra
+            // $item is opgeslagen; een mislukte webhook mag dat niet meer
+            // ongedaan maken, anders slaat de buitenste try/catch in
+            // syncChunk() deze wijziging plat als "niets veranderd" en mist
+            // de afnemer zijn feed-generatie voor een product dat wel echt
+            // veranderd is.
+            ResellerWebhooks::notify($profile, ResellerWebhooks::EVENT_UPDATED, $payload);
+        } catch (Throwable $e) {
+            report($e);
+        }
+
+        return true;
     }
 
-    private function markRemoved(ResellerProfile $profile, CatalogItem $item): void
+    private function markRemoved(ResellerProfile $profile, CatalogItem $item): bool
     {
         $item->fill(['removed_at' => now(), 'changed_at' => now()])->save();
 
-        ResellerWebhooks::notify($profile, ResellerWebhooks::EVENT_REMOVED, [
-            'id' => (int) $item->product_id,
-            'removed' => true,
-            'changed_at' => $item->changed_at->toIso8601String(),
-        ]);
+        try {
+            ResellerWebhooks::notify($profile, ResellerWebhooks::EVENT_REMOVED, [
+                'id' => (int) $item->product_id,
+                'removed' => true,
+                'changed_at' => $item->changed_at->toIso8601String(),
+            ]);
+        } catch (Throwable $e) {
+            report($e);
+        }
+
+        return true;
     }
 
     /**

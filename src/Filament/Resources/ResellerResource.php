@@ -11,6 +11,7 @@ use Filament\Actions\EditAction;
 use Filament\Resources\Resource;
 use Dashed\DashedCore\Models\User;
 use Filament\Actions\DeleteAction;
+use Illuminate\Support\HtmlString;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Toggle;
 use Filament\Tables\Columns\IconColumn;
@@ -20,6 +21,7 @@ use Filament\Schemas\Components\Section;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Utilities\Get;
 use Dashed\DashedCore\Webhooks\Outgoing\UrlGuard;
+use Dashed\DashedEcommerceReseller\Setup\SetupInstructions;
 use Dashed\DashedEcommerceReseller\Models\ResellerProfile;
 use Dashed\DashedCore\Classes\QueryHelpers\TokenizedSearch;
 use Dashed\DashedEcommerceReseller\Filament\Resources\ResellerResource\Pages\EditReseller;
@@ -108,6 +110,39 @@ class ResellerResource extends Resource
                         ->label(__('Status'))
                         ->state(fn (?ResellerProfile $record): string => self::webhookStatus($record))
                         ->visibleOn('edit'),
+                ]),
+            Section::make(__('Koppelen met Shopify of WooCommerce'))
+                ->description(__('Met deze links zet de afnemer ons assortiment zelf in zijn winkel. Stuur hem de uitleg met de knop Installatiemail sturen.'))
+                ->columnSpanFull()
+                ->collapsible()
+                ->collapsed()
+                ->visibleOn('edit')
+                ->schema([
+                    TextEntry::make('shopify_feed')
+                        ->label(__('Shopify (Matrixify)'))
+                        ->state(fn (?ResellerProfile $record): string => $record?->feedUrl('shopify') ?? '-')
+                        ->copyable(),
+                    TextEntry::make('woocommerce_feed')
+                        ->label(__('WooCommerce (WP All Import)'))
+                        ->state(fn (?ResellerProfile $record): string => $record?->feedUrl('woocommerce') ?? '-')
+                        ->copyable(),
+                    TextEntry::make('feed_generated_shopify')
+                        ->label(__('Shopify laatst bijgewerkt'))
+                        ->state(fn (?ResellerProfile $record): string => $record?->feedGeneratedAt('shopify')?->diffForHumans() ?? __('Nog niet, gebeurt bij de eerste ophaling')),
+                    TextEntry::make('feed_generated_woocommerce')
+                        ->label(__('WooCommerce laatst bijgewerkt'))
+                        ->state(fn (?ResellerProfile $record): string => $record?->feedGeneratedAt('woocommerce')?->diffForHumans() ?? __('Nog niet, gebeurt bij de eerste ophaling')),
+                    TextEntry::make('feed_last_fetched')
+                        ->label(__('Laatst opgehaald'))
+                        ->state(fn (?ResellerProfile $record): string => self::lastFeedFetch($record)),
+                    TextEntry::make('setup_shopify')
+                        ->label(__('Stappen voor Shopify'))
+                        ->state(fn (?ResellerProfile $record) => $record ? new HtmlString(SetupInstructions::html($record, 'shopify')) : null)
+                        ->html(),
+                    TextEntry::make('setup_woocommerce')
+                        ->label(__('Stappen voor WooCommerce'))
+                        ->state(fn (?ResellerProfile $record) => $record ? new HtmlString(SetupInstructions::html($record, 'woocommerce')) : null)
+                        ->html(),
                 ]),
         ]);
     }
@@ -210,6 +245,26 @@ class ResellerResource extends Resource
 
         return $user->priceGroup?->name
             ?? __('Geen prijsgroep: deze afnemer krijgt de consumentenprijs als inkoopprijs. Stel een prijsgroep in bij Prijsgroepen.');
+    }
+
+    /**
+     * De laatste keer dat Matrixify of WP All Import de feed daadwerkelijk
+     * ophaalde, gelezen uit het API-logboek: dat is wat een afnemer echt
+     * doet, in tegenstelling tot "laatst bijgewerkt" (wanneer wij het
+     * bestand voor het laatst schreven).
+     */
+    private static function lastFeedFetch(?ResellerProfile $record): string
+    {
+        if ($record === null) {
+            return '-';
+        }
+
+        $log = $record->apiLogs()
+            ->where('path', 'like', '/reseller-feed/%')
+            ->latest('created_at')
+            ->first();
+
+        return $log?->created_at?->diffForHumans() ?? __('Nog nooit');
     }
 
     private static function webhookStatus(?ResellerProfile $record): string

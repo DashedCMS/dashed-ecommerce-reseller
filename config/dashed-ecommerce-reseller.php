@@ -19,5 +19,13 @@ return [
         'removed_items_days' => 30,
     ],
 
+    'feeds' => [
+        // Lokaal en privé: het bestand bevat inkoopprijzen.
+        'disk' => 'local',
+        // Een reeks wijzigingen levert één generatie op.
+        'delay_seconds' => 300,
+        'rate_limit_default' => 60,
+    ],
+
     'currency' => 'EUR',
 ];
