@@ -16,10 +16,11 @@ Het verzoek moet bij onze server als https aankomen. Staat er een proxy of load 
 
 Er geldt een limiet per sleutel (standaard 300 verzoeken per minuut). Daarboven krijg je een 429 met een `Retry-After`-header.
 
-## Feeds voor Shopify en WooCommerce
+## Feeds
 
-Wil je geen eigen koppeling bouwen, dan kun je ons assortiment als bestand
-inlezen. Je krijgt van ons twee links, met een eigen sleutel erin:
+Wil je geen eigen koppeling op de API bouwen, dan kun je ons assortiment als
+bestand inlezen. Je krijgt van ons vier links, met dezelfde sleutel erin.
+Twee daarvan zijn kant en klaar voor een winkelplatform:
 
 - `https://<domein>/reseller-feed/<sleutel>/shopify.csv`, in het formaat van
   Matrixify (Shopify). Varianten staan onder één Handle. Een product dat uit
@@ -54,6 +55,68 @@ hetzelfde product en maakt in je winkel een nieuw product aan; het oude
 product met de oude naam blijft gewoon staan. Zet daarom voor een product dat
 je via afnemers verkoopt een vaste slug, of wees je bewust van dit gevolg
 voordat je een productnaam wijzigt.
+
+### JSON en XML
+
+Zit je niet op Shopify of WooCommerce, dan staat hetzelfde assortiment klaar
+in twee open formaten:
+
+- `https://<domein>/reseller-feed/<sleutel>/products.json`
+- `https://<domein>/reseller-feed/<sleutel>/products.xml`
+
+Dezelfde gegevens als in de twee CSV's, in een vorm die niet naar een
+platform is gemodelleerd, en zonder API-sleutel. Beide bestanden hebben
+dezelfde boom:
+
+```json
+{
+  "generated_at": "2026-09-23T14:00:00+00:00",
+  "locale": "nl",
+  "vendor": "Onze winkel",
+  "currency": "EUR",
+  "products": [
+    {
+      "handle": "beugel-zwart",
+      "name": "Beugel zwart",
+      "grouped": true,
+      "description": "<p>...</p>",
+      "short_description": "...",
+      "categories": ["Bevestiging"],
+      "images": ["https://..."],
+      "variants": [
+        {
+          "sku": "BEU-01",
+          "ean": "8712345678901",
+          "purchase_price": 8.26,
+          "advice_price": 12.95,
+          "vat_rate": 21,
+          "stock": {"quantity": 14, "in_stock": true, "unlimited": false},
+          "weight": 0.4,
+          "length": null,
+          "width": null,
+          "height": null,
+          "options": [{"name": "Kleur", "value": "Zwart"}]
+        }
+      ]
+    }
+  ],
+  "removed": [{"handle": "oude-beugel", "sku": "BEU-00", "whole_product": true}]
+}
+```
+
+`purchase_price` is jouw inkoopprijs exclusief btw, `advice_price` onze
+adviesprijs inclusief btw: dezelfde twee bedragen als in de CSV's. `grouped`
+zegt of dit een product met varianten is; een groep met één variant blijft een
+groep, zodat een tweede variant later geen tweede product oplevert. Wat onder
+`removed` staat, zat eerder in je assortiment en hoort er nu niet meer bij;
+wat je daarmee doet bepaal je zelf.
+
+De XML is dezelfde boom zonder namespace: `<feed>` met `<products><product>`
+en daarin `<variants><variant>`. Een optie staat als
+`<option name="Kleur">Zwart</option>`.
+
+Wil je meer dan dit (vertalingen, kenmerken, product-URL's), gebruik dan de
+API hieronder; die vraagt wel om een sleutel.
 
 ## Fouten
 

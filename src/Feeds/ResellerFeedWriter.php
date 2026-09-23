@@ -25,6 +25,18 @@ class ResellerFeedWriter
     {
         $catalog = FeedCatalog::for($profile);
 
+        // JSON en XML worden in hun geheel opgebouwd en niet regel voor regel
+        // gestreamd zoals een CSV: het zijn bomen, en een half geschreven boom
+        // is geen geldig document. Ze gaan verder langs precies hetzelfde
+        // schrijfpatroon, dus ook zij verschijnen atomisch.
+        if (in_array($format, ['json', 'xml'], true)) {
+            $feed = new GenericFeed($catalog);
+
+            $this->put($profile, $format, $format === 'json' ? $feed->json() : $feed->xml());
+
+            return;
+        }
+
         [$header, $rows] = match ($format) {
             'shopify' => [ShopifyFeed::HEADER, ShopifyFeed::rows($catalog)],
             'woocommerce' => (function () use ($catalog) {
@@ -73,6 +85,27 @@ class ResellerFeedWriter
             // het tijdelijke bestand anders voorgoed op schijf staan; het
             // eindresultaat ($path) is dan nog steeds het vorige, volledige
             // bestand.
+            if ($disk->exists($tmp)) {
+                $disk->delete($tmp);
+            }
+        }
+    }
+
+    /**
+     * Schrijven via een uniek tijdelijk bestand en daarna hernoemen, om
+     * dezelfde reden als hierboven: een ophaling tijdens het schrijven krijgt
+     * het vorige, volledige bestand en nooit een half.
+     */
+    private function put(ResellerProfile $profile, string $format, string $inhoud): void
+    {
+        $disk = Storage::disk(config('dashed-ecommerce-reseller.feeds.disk', 'local'));
+        $path = $profile->feedPath($format);
+        $tmp = $path.'.'.Str::random(8).'.tmp';
+
+        try {
+            $disk->put($tmp, $inhoud);
+            $disk->move($tmp, $path);
+        } finally {
             if ($disk->exists($tmp)) {
                 $disk->delete($tmp);
             }

@@ -21,9 +21,9 @@ use Filament\Schemas\Components\Section;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Utilities\Get;
 use Dashed\DashedCore\Webhooks\Outgoing\UrlGuard;
-use Dashed\DashedEcommerceReseller\Setup\SetupInstructions;
 use Dashed\DashedEcommerceReseller\Models\ResellerProfile;
 use Dashed\DashedCore\Classes\QueryHelpers\TokenizedSearch;
+use Dashed\DashedEcommerceReseller\Setup\SetupInstructions;
 use Dashed\DashedEcommerceReseller\Filament\Resources\ResellerResource\Pages\EditReseller;
 use Dashed\DashedEcommerceReseller\Filament\Resources\ResellerResource\Pages\ListResellers;
 use Dashed\DashedEcommerceReseller\Filament\Resources\ResellerResource\Pages\CreateReseller;
@@ -111,8 +111,8 @@ class ResellerResource extends Resource
                         ->state(fn (?ResellerProfile $record): string => self::webhookStatus($record))
                         ->visibleOn('edit'),
                 ]),
-            Section::make(__('Koppelen met Shopify of WooCommerce'))
-                ->description(__('Met deze links zet de afnemer ons assortiment zelf in zijn winkel. Stuur hem de uitleg met de knop Installatiemail sturen.'))
+            Section::make(__('Feeds voor de afnemer'))
+                ->description(__('Met deze links zet de afnemer ons assortiment zelf in zijn winkel. De twee CSV-feeds zijn voor Shopify en WooCommerce, de JSON- en XML-feed zijn voor een eigen koppeling. Stuur hem de uitleg met de knop Installatiemail sturen.'))
                 ->columnSpanFull()
                 ->collapsible()
                 ->collapsed()
@@ -126,12 +126,26 @@ class ResellerResource extends Resource
                         ->label(__('WooCommerce (WP All Import)'))
                         ->state(fn (?ResellerProfile $record): string => $record?->feedUrl('woocommerce') ?? '-')
                         ->copyable(),
+                    TextEntry::make('json_feed')
+                        ->label(__('JSON (eigen koppeling)'))
+                        ->state(fn (?ResellerProfile $record): string => $record?->feedUrl('json') ?? '-')
+                        ->copyable(),
+                    TextEntry::make('xml_feed')
+                        ->label(__('XML (eigen koppeling)'))
+                        ->state(fn (?ResellerProfile $record): string => $record?->feedUrl('xml') ?? '-')
+                        ->copyable(),
                     TextEntry::make('feed_generated_shopify')
                         ->label(__('Shopify laatst bijgewerkt'))
                         ->state(fn (?ResellerProfile $record): string => $record?->feedGeneratedAt('shopify')?->diffForHumans() ?? __('Nog niet, gebeurt bij de eerste ophaling')),
                     TextEntry::make('feed_generated_woocommerce')
                         ->label(__('WooCommerce laatst bijgewerkt'))
                         ->state(fn (?ResellerProfile $record): string => $record?->feedGeneratedAt('woocommerce')?->diffForHumans() ?? __('Nog niet, gebeurt bij de eerste ophaling')),
+                    TextEntry::make('feed_generated_json')
+                        ->label(__('JSON laatst bijgewerkt'))
+                        ->state(fn (?ResellerProfile $record): string => $record?->feedGeneratedAt('json')?->diffForHumans() ?? __('Nog niet, gebeurt bij de eerste ophaling')),
+                    TextEntry::make('feed_generated_xml')
+                        ->label(__('XML laatst bijgewerkt'))
+                        ->state(fn (?ResellerProfile $record): string => $record?->feedGeneratedAt('xml')?->diffForHumans() ?? __('Nog niet, gebeurt bij de eerste ophaling')),
                     TextEntry::make('feed_last_fetched')
                         ->label(__('Laatst opgehaald'))
                         ->state(fn (?ResellerProfile $record): string => self::lastFeedFetch($record)),
@@ -142,6 +156,10 @@ class ResellerResource extends Resource
                     TextEntry::make('setup_woocommerce')
                         ->label(__('Stappen voor WooCommerce'))
                         ->state(fn (?ResellerProfile $record) => $record ? new HtmlString(SetupInstructions::html($record, 'woocommerce')) : null)
+                        ->html(),
+                    TextEntry::make('setup_other')
+                        ->label(__('Stappen voor een eigen koppeling'))
+                        ->state(fn (?ResellerProfile $record) => $record ? new HtmlString(SetupInstructions::html($record, 'other')) : null)
                         ->html(),
                 ]),
         ]);

@@ -3,8 +3,8 @@
 namespace Dashed\DashedEcommerceReseller\Models;
 
 use Illuminate\Support\Str;
-use Dashed\DashedCore\Models\User;
 use Illuminate\Support\Carbon;
+use Dashed\DashedCore\Models\User;
 use Laravel\Sanctum\NewAccessToken;
 use Dashed\DashedCore\Classes\Sites;
 use Illuminate\Database\Eloquent\Model;
@@ -25,7 +25,23 @@ class ResellerProfile extends Model
 {
     protected $table = 'dashed__reseller_profiles';
 
-    public const FEED_FORMATS = ['shopify', 'woocommerce'];
+    public const FEED_FORMATS = ['shopify', 'woocommerce', 'json', 'xml'];
+
+    /**
+     * De bestandsnaam per formaat. Een vaste afleiding uit de formaatnaam kan
+     * niet: de twee importfeeds heten naar hun platform en zijn CSV, de twee
+     * open feeds heten naar hun inhoud. De naam staat in de URL van de
+     * afnemer, dus hij ligt hiermee op een plek vast in plaats van verspreid
+     * over route, controller en model.
+     *
+     * @var array<string, string>
+     */
+    public const FEED_FILES = [
+        'shopify' => 'shopify.csv',
+        'woocommerce' => 'woocommerce.csv',
+        'json' => 'products.json',
+        'xml' => 'products.xml',
+    ];
 
     protected $fillable = ['user_id', 'assortment_id', 'enabled', 'webhook_subscription_id'];
 
@@ -200,12 +216,23 @@ class ResellerProfile extends Model
      */
     public function feedUrl(string $format): string
     {
-        return Sites::url('/reseller-feed/'.$this->feed_token.'/'.$format.'.csv', $this->assortment?->site_id);
+        return Sites::url('/reseller-feed/'.$this->feed_token.'/'.self::feedFile($format), $this->assortment?->site_id);
+    }
+
+    public static function feedFile(string $format): string
+    {
+        return self::FEED_FILES[$format] ?? $format.'.csv';
+    }
+
+    /** Het formaat achter een bestandsnaam uit de URL, of null als die niet bestaat. */
+    public static function feedFormatForFile(string $file): ?string
+    {
+        return array_search($file, self::FEED_FILES, true) ?: null;
     }
 
     public function feedPath(string $format): string
     {
-        return 'reseller-feeds/'.$this->id.'/'.$format.'.csv';
+        return 'reseller-feeds/'.$this->id.'/'.self::feedFile($format);
     }
 
     public function feedGeneratedAt(string $format): ?Carbon

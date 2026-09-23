@@ -6,17 +6,17 @@ use Throwable;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Illuminate\Support\HtmlString;
+use Illuminate\Support\Facades\Mail;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Toggle;
-use Illuminate\Support\Facades\Mail;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
 use Dashed\DashedEcommerceReseller\Mail\ResellerSetupMail;
-use Dashed\DashedEcommerceReseller\Setup\SetupInstructions;
-use Dashed\DashedEcommerceReseller\Feeds\ResellerFeedWriter;
 use Dashed\DashedEcommerceReseller\Models\ResellerProfile;
+use Dashed\DashedEcommerceReseller\Setup\SetupInstructions;
 use Dashed\DashedEcommerceReseller\Webhooks\ResellerWebhooks;
+use Dashed\DashedEcommerceReseller\Jobs\GenerateResellerFeedsJob;
 use Dashed\DashedEcommerceReseller\Filament\Resources\ResellerResource;
 
 class EditReseller extends EditRecord
@@ -60,29 +60,23 @@ class EditReseller extends EditRecord
                         ->default(false),
                 ])
                 ->action(function (array $data): void {
-                    // De eerste koppeling van een afnemer mag nooit tegen de 503
-                    // van de feedroute aanlopen: hier zit geen token in de
-                    // request-URL (dit is een beheerderssessie, geen publieke
-                    // route), dus een fout mag gewoon gerapporteerd worden.
-                    // ResellerFeedWriter::write() schrijft altijd beide
-                    // formaten, dus één ontbrekend bestand is genoeg reden om
-                    // ze allebei opnieuw te maken.
+                    // De feeds worden nooit in dit verzoek aangemaakt. Dat is
+                    // hetzelfde werk als GenerateResellerFeedsJob, die er tien
+                    // minuten voor krijgt, en een catalogus van enige omvang
+                    // liep zo tegen de gateway timeout van de webserver aan:
+                    // de mail werd dan nooit bereikt. Ontbreekt er een bestand,
+                    // dan gaat er nu een generatie de wachtrij in en gaat de
+                    // mail gewoon de deur uit. Haalt de afnemer zijn link op
+                    // voordat die klaar is, dan krijgt hij de 503 met
+                    // Retry-After van de feedroute, en dat lost zichzelf op.
+                    // Zonder vertraging, anders dan dispatchFor(): daar bundelt
+                    // de vertraging honderd synchronisaties tot één bestand, hier
+                    // wacht een beheerder op een mail die hij net verstuurd heeft.
                     $ontbreekt = collect(ResellerProfile::FEED_FORMATS)
                         ->contains(fn (string $format): bool => $this->record->feedGeneratedAt($format) === null);
 
                     if ($ontbreekt) {
-                        try {
-                            app(ResellerFeedWriter::class)->write($this->record);
-                        } catch (Throwable $e) {
-                            report($e);
-
-                            Notification::make()
-                                ->title(__('De feeds konden niet worden aangemaakt; de mail is niet verstuurd.'))
-                                ->danger()
-                                ->send();
-
-                            return;
-                        }
+                        GenerateResellerFeedsJob::dispatch($this->record->id);
                     }
 
                     $token = $data['with_api_key']
@@ -114,7 +108,13 @@ class EditReseller extends EditRecord
                         ->withProperties(['email' => $data['email'], 'platform' => $data['platform'], 'with_api_key' => (bool) $data['with_api_key']])
                         ->log('reseller:setup-mail-sent'), report: false);
 
-                    Notification::make()->title(__('Installatiemail verstuurd'))->success()->send();
+                    $melding = Notification::make()->title(__('Installatiemail verstuurd'))->success();
+
+                    if ($ontbreekt) {
+                        $melding->body(__('De feeds worden nu op de achtergrond aangemaakt. Haalt de afnemer zijn link op voordat ze klaar zijn, dan krijgt hij het verzoek om het zo opnieuw te proberen.'));
+                    }
+
+                    $melding->send();
                 }),
             Action::make('newFeedToken')
                 ->label(__('Nieuwe feedsleutel'))

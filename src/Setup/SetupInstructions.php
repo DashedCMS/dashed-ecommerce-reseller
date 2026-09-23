@@ -65,7 +65,11 @@ final class SetupInstructions
     {
         $items = [
             __('De volledige API staat op :url. Stuur deze link naar je developer of koppelpartij.', ['url' => '<a href="'.e(Sites::url(route('dashed.reseller-api.docs', absolute: false), $profile->assortment?->site_id)).'">'.e(__('de documentatiepagina')).'</a>']),
-            __('Kant-en-klare productbestanden, voor wie liever een bestand inleest: Shopify (Matrixify) :shopify en WooCommerce (WP All Import) :woocommerce', [
+            __('Liever een bestand inlezen dan de API aanroepen? Het hele assortiment staat ook klaar als JSON (:json) en als XML (:xml). Dezelfde gegevens, geen sleutel nodig, elke paar uur bijgewerkt.', [
+                'json' => '<code>'.e($profile->feedUrl('json')).'</code>',
+                'xml' => '<code>'.e($profile->feedUrl('xml')).'</code>',
+            ]),
+            __('Kant-en-klare productbestanden voor een winkel op een van deze twee platforms: Shopify (Matrixify) :shopify en WooCommerce (WP All Import) :woocommerce', [
                 'shopify' => '<code>'.e($profile->feedUrl('shopify')).'</code>',
                 'woocommerce' => '<code>'.e($profile->feedUrl('woocommerce')).'</code>',
             ]),

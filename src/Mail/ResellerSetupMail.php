@@ -2,14 +2,14 @@
 
 namespace Dashed\DashedEcommerceReseller\Mail;
 
+use Illuminate\Mail\Mailable;
 use Dashed\DashedCore\Classes\Sites;
+use Dashed\DashedCore\Models\Customsetting;
 use Dashed\DashedCore\Mail\Concerns\HasEmailTemplate;
 use Dashed\DashedCore\Mail\Contracts\ContainsSecrets;
-use Dashed\DashedCore\Mail\Contracts\RegistersEmailTemplate;
-use Dashed\DashedCore\Models\Customsetting;
 use Dashed\DashedEcommerceReseller\Models\ResellerProfile;
 use Dashed\DashedEcommerceReseller\Setup\SetupInstructions;
-use Illuminate\Mail\Mailable;
+use Dashed\DashedCore\Mail\Contracts\RegistersEmailTemplate;
 
 /**
  * De mail waarmee een afnemer zijn koppeling instelt. Bevat de feedlinks en
@@ -40,7 +40,7 @@ class ResellerSetupMail extends Mailable implements RegistersEmailTemplate, Cont
 
     public static function availableVariables(): array
     {
-        return ['customerFirstName', 'companyName', 'siteName', 'instructions', 'shopifyFeedUrl', 'woocommerceFeedUrl', 'apiDocsUrl', 'apiKey', 'primaryColor'];
+        return ['customerFirstName', 'companyName', 'siteName', 'instructions', 'shopifyFeedUrl', 'woocommerceFeedUrl', 'jsonFeedUrl', 'xmlFeedUrl', 'apiDocsUrl', 'apiKey', 'primaryColor'];
     }
 
     public static function defaultSubject(): string
@@ -73,6 +73,8 @@ class ResellerSetupMail extends Mailable implements RegistersEmailTemplate, Cont
             'instructions' => '<ol><li>Matrixify installeren</li></ol>',
             'shopifyFeedUrl' => url('/reseller-feed/demo/shopify.csv'),
             'woocommerceFeedUrl' => url('/reseller-feed/demo/woocommerce.csv'),
+            'jsonFeedUrl' => url('/reseller-feed/demo/products.json'),
+            'xmlFeedUrl' => url('/reseller-feed/demo/products.xml'),
             'apiDocsUrl' => url('/reseller-api/docs'),
             'apiKey' => '',
         ];
@@ -101,6 +103,8 @@ class ResellerSetupMail extends Mailable implements RegistersEmailTemplate, Cont
             'instructions' => SetupInstructions::html($this->profile, $this->platform, $this->apiKey),
             'shopifyFeedUrl' => e($this->profile->feedUrl('shopify')),
             'woocommerceFeedUrl' => e($this->profile->feedUrl('woocommerce')),
+            'jsonFeedUrl' => e($this->profile->feedUrl('json')),
+            'xmlFeedUrl' => e($this->profile->feedUrl('xml')),
             'apiDocsUrl' => e(Sites::url(route('dashed.reseller-api.docs', absolute: false), $siteId)),
             'apiKey' => $this->apiKey !== null ? e($this->apiKey) : '',
         ];

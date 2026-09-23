@@ -1,5 +1,14 @@
 # Changelog
 
+## v4.2.0 - 2026-09-23
+
+### Added
+- **Een open JSON- en XML-feed naast de twee importfeeds.** `products.json` en `products.xml` op dezelfde route en met dezelfde sleutel, met dezelfde velden als de CSV's maar zonder de vorm van een platform, voor een afnemer die zijn koppeling zelf bouwt en geen API-sleutel wil beheren. `GenericFeed` bouwt beide uit dezelfde `FeedCatalog`, dus een afnemer die later overstapt op Matrixify krijgt geen andere gegevens. De XML gaat door `XMLWriter`, zodat HTML in een omschrijving het document niet breekt.
+- De bestandsnaam per formaat staat nu op één plek (`ResellerProfile::FEED_FILES`); de route laat alleen nog de vorm door en de controller zoekt het formaat bij de naam. De twee bestaande CSV-links zijn ongewijzigd.
+
+### Fixed
+- **De knop "Installatiemail sturen" liep in een gateway timeout.** Hij maakte ontbrekende feeds zelf aan, in het verzoek: hetzelfde werk waar de wachtrij-job tien minuten voor krijgt. Nu zet hij er een generatie voor klaar en gaat de mail meteen de deur uit; haalt de afnemer zijn link te vroeg op, dan krijgt hij de 503 met `Retry-After` die de feedroute daar al voor had.
+
 ## v4.1.0 - 2026-09-22
 
 ### Added

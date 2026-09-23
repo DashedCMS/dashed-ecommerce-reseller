@@ -16,15 +16,21 @@ use Dashed\DashedEcommerceReseller\Jobs\GenerateResellerFeedsJob;
  */
 class FeedController
 {
-    public function __invoke(Request $request, string $token, string $format): Response
+    /** Het mediatype en de downloadnaam per formaat. */
+    private const TYPES = [
+        'shopify' => ['text/csv; charset=UTF-8', 'products.csv'],
+        'woocommerce' => ['text/csv; charset=UTF-8', 'products.csv'],
+        'json' => ['application/json; charset=UTF-8', 'products.json'],
+        'xml' => ['application/xml; charset=UTF-8', 'products.xml'],
+    ];
+
+    public function __invoke(Request $request, string $token, string $file): Response
     {
         $started = hrtime(true);
         $profile = ResellerProfile::findByFeedToken($token);
+        $format = ResellerProfile::feedFormatForFile($file);
 
-        abort_unless(
-            in_array($format, ResellerProfile::FEED_FORMATS, true) && $profile?->isActive(),
-            404,
-        );
+        abort_unless($format !== null && $profile?->isActive(), 404);
 
         $disk = Storage::disk(config('dashed-ecommerce-reseller.feeds.disk', 'local'));
         $path = $profile->feedPath($format);
@@ -54,7 +60,7 @@ class FeedController
                 'token_id' => null,
                 'user_id' => $profile->user_id,
                 'method' => 'GET',
-                'path' => '/reseller-feed/***/'.$format.'.csv',
+                'path' => '/reseller-feed/***/'.$file,
                 'status' => 503,
                 'duration_ms' => (int) ((hrtime(true) - $started) / 1_000_000),
                 'ip' => $request->ip(),
@@ -70,8 +76,10 @@ class FeedController
         // Cache-Control voorkomt dat de rand (Cloudflare rekent .csv
         // standaard tot de cachebare extensies) een respons met
         // inkoopprijzen bewaart en die aan een andere bezoeker teruggeeft.
-        $response = $disk->download($path, 'products.csv', [
-            'Content-Type' => 'text/csv; charset=UTF-8',
+        [$type, $naam] = self::TYPES[$format];
+
+        $response = $disk->download($path, $naam, [
+            'Content-Type' => $type,
             'Cache-Control' => 'private, no-store',
         ]);
 
@@ -81,7 +89,7 @@ class FeedController
             'token_id' => null,
             'user_id' => $profile->user_id,
             'method' => 'GET',
-            'path' => '/reseller-feed/***/'.$format.'.csv',
+            'path' => '/reseller-feed/***/'.$file,
             'status' => 200,
             'duration_ms' => (int) ((hrtime(true) - $started) / 1_000_000),
             'ip' => $request->ip(),
