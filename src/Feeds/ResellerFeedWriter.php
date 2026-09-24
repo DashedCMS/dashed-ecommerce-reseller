@@ -16,14 +16,20 @@ class ResellerFeedWriter
 {
     public function write(ResellerProfile $profile): void
     {
+        // Eén catalogus voor alle formaten. Het opbouwen is het dure deel
+        // (per product prijs, voorraad en kenmerken), en per formaat opnieuw
+        // doen betekende vier keer hetzelfde werk binnen de timeout van
+        // GenerateResellerFeedsJob.
+        $catalog = FeedCatalog::for($profile);
+
         foreach (ResellerProfile::FEED_FORMATS as $format) {
-            $this->writeFormat($profile, $format);
+            $this->writeFormat($profile, $format, $catalog);
         }
     }
 
-    public function writeFormat(ResellerProfile $profile, string $format): void
+    public function writeFormat(ResellerProfile $profile, string $format, ?FeedCatalog $catalog = null): void
     {
-        $catalog = FeedCatalog::for($profile);
+        $catalog ??= FeedCatalog::for($profile);
 
         // JSON en XML worden in hun geheel opgebouwd en niet regel voor regel
         // gestreamd zoals een CSV: het zijn bomen, en een half geschreven boom

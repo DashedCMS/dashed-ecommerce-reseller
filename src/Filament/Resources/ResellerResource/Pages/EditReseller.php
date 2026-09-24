@@ -116,6 +116,26 @@ class EditReseller extends EditRecord
 
                     $melding->send();
                 }),
+            Action::make('refreshFeeds')
+                ->label(__('Feeds vernieuwen'))
+                ->icon('heroicon-o-arrow-path')
+                ->color('gray')
+                ->visible(fn (): bool => $this->record->isActive())
+                ->action(function (): void {
+                    // Via de wachtrij, om dezelfde reden als bij de
+                    // installatiemail: in dit verzoek loopt een echte
+                    // catalogus tegen de timeout van de webserver aan. Zonder
+                    // vertraging, want de beheerder wacht erop. Wacht er al
+                    // een generatie voor dit profiel, dan laat de unieke lock
+                    // deze vallen; die ene wachtende doet dan hetzelfde werk.
+                    GenerateResellerFeedsJob::dispatch($this->record->id);
+
+                    Notification::make()
+                        ->title(__('Feeds worden vernieuwd'))
+                        ->body(__('Dat gebeurt op de achtergrond en duurt een paar minuten. Bij "laatst bijgewerkt" zie je wanneer ze klaar zijn.'))
+                        ->success()
+                        ->send();
+                }),
             Action::make('newFeedToken')
                 ->label(__('Nieuwe feedsleutel'))
                 ->icon('heroicon-o-arrow-path')

@@ -23,6 +23,9 @@ use Dashed\DashedEcommerceReseller\Catalog\ProductPresenter;
  */
 class FeedCatalog
 {
+    /** Eén keer opgebouwd per catalogus: de vier formaten lezen dezelfde lijst. */
+    private ?array $entries = null;
+
     private function __construct(
         private ResellerProfile $profile,
         private string $locale,
@@ -50,6 +53,11 @@ class FeedCatalog
      * @return list<array{handle: string, group_id: ?int, name: string, variants: list<array{product: array, options: list<array{name: string, value: string}>}>}>
      */
     public function entries(): array
+    {
+        return $this->entries ??= $this->build();
+    }
+
+    private function build(): array
     {
         $presenter = app(ProductPresenter::class);
         $entries = [];

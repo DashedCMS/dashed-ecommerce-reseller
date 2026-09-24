@@ -1,5 +1,13 @@
 # Changelog
 
+## v4.2.1 - 2026-09-24
+
+### Fixed
+- **Feeds kwamen bij een grote catalogus nooit af.** `GenerateResellerFeedsJob` bouwde de catalogus per formaat opnieuw op, vier keer, en liep met de trage kenmerken uit ec-core over zijn timeout van 600 seconden, waarna er geen bestand kwam en elke ophaling een 503 bleef geven. `ResellerFeedWriter::write()` bouwt de catalogus nu één keer en `FeedCatalog::entries()` onthoudt hem. Bij lovora van ruim vijf minuten naar anderhalve minuut (met ec-core v4.139.2).
+
+### Added
+- Knop **Feeds vernieuwen** op de afnemer: zet direct een generatie in de wachtrij.
+
 ## v4.2.0 - 2026-09-23
 
 ### Added
