@@ -10,11 +10,12 @@ use Dashed\DashedEcommerceReseller\Enums\StockDisplay;
  * total_stock en niet directSellableStock(): die laatste trekt
  * winkelwagenreserveringen af, en die veranderen zonder event. De
  * vingerafdruk zou dan steeds afwijken van wat de API laat zien.
- * calculateStock() zet 100000 neer voor alles wat onbeperkt verkoopbaar is.
+ * calculateStock() zet Product::UNLIMITED_STOCK neer voor alles wat onbeperkt
+ * verkoopbaar is.
  */
 final class StockPresenter
 {
-    public const UNLIMITED = 100000;
+    public const UNLIMITED = Product::UNLIMITED_STOCK;
 
     public static function present(Product $product, Assortment $assortment): array
     {
