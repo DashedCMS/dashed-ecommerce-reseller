@@ -6,6 +6,7 @@ use Illuminate\Events\Dispatcher;
 use Dashed\DashedEcommerceCore\Models\Product;
 use Dashed\DashedEcommerceReseller\Models\ResellerProfile;
 use Dashed\DashedEcommerceReseller\Jobs\SyncResellerUserJob;
+use Dashed\DashedEcommerceReseller\Catalog\PendingProductSync;
 use Dashed\DashedEcommerceReseller\Jobs\SyncResellerProductsJob;
 use Dashed\DashedEcommerceReseller\Jobs\SyncResellerPriceGroupJob;
 use Dashed\DashedEcommerceCore\Events\Products\ProductInformationUpdatedEvent;
@@ -53,7 +54,8 @@ class CatalogSyncSubscriber
         $productIds = array_values(array_unique(array_map('intval', $productIds)));
 
         if ($productIds !== [] && self::hasResellers()) {
-            SyncResellerProductsJob::dispatch($productIds);
+            PendingProductSync::add($productIds);
+            SyncResellerProductsJob::dispatchPending();
         }
     }
 

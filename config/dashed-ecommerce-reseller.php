@@ -12,6 +12,9 @@ return [
         // Porties bij het herberekenen van een hele catalogus.
         'chunk' => 500,
         'queue' => 'ecommerce',
+        // Productwijzigingen wachten zo lang op elkaar voordat ze in één
+        // job tegen de catalogus gaan.
+        'debounce_seconds' => 30,
     ],
 
     'retention' => [
