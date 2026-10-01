@@ -14,7 +14,9 @@ use Dashed\DashedEcommerceReseller\Enums\StockDisplay;
 /**
  * Wat een afnemer mag zien. Een product zit erin als het publiek is, op de
  * site staat, door minstens één opname-regel geraakt wordt en door geen
- * enkele uitsluiting. Zonder regels is een assortiment leeg, niet "alles".
+ * enkele uitsluiting. Zonder regels is een assortiment leeg, niet "alles";
+ * "alles" is de expliciete keuze include_all, waarbij de opname-regels niet
+ * meer tellen maar de uitsluitingen wel.
  */
 class Assortment extends Model
 {
@@ -29,13 +31,14 @@ class Assortment extends Model
 
     protected $table = 'dashed__reseller_assortments';
 
-    protected $fillable = ['name', 'site_id', 'stock_display', 'stock_cap'];
+    protected $fillable = ['name', 'site_id', 'include_all', 'stock_display', 'stock_cap'];
 
-    protected $attributes = ['stock_display' => 'exact'];
+    protected $attributes = ['stock_display' => 'exact', 'include_all' => false];
 
     protected $casts = [
         'stock_display' => StockDisplay::class,
         'stock_cap' => 'integer',
+        'include_all' => 'boolean',
     ];
 
     public function rules(): HasMany
@@ -61,6 +64,10 @@ class Assortment extends Model
             ->where('dashed__products.public', 1)
             ->whereJsonContains('dashed__products.site_ids', $this->site_id);
 
+        if ($this->include_all) {
+            return $this->applyExclusions($query, $exclude);
+        }
+
         if ($include['category'] === [] && $include['product_group'] === [] && $include['product'] === []) {
             return $query->whereRaw('1 = 0');
         }
@@ -79,6 +86,14 @@ class Assortment extends Model
             }
         });
 
+        return $this->applyExclusions($query, $exclude);
+    }
+
+    /**
+     * @param  array{category: list<int>, product_group: list<int>, product: list<int>}  $exclude
+     */
+    private function applyExclusions(Builder $query, array $exclude): Builder
+    {
         if ($exclude['product'] !== []) {
             $query->whereNotIn('dashed__products.id', $exclude['product']);
         }

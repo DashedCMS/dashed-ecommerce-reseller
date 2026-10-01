@@ -6,12 +6,14 @@ use UnitEnum;
 use BackedEnum;
 use Filament\Tables\Table;
 use Filament\Schemas\Schema;
+use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Resources\Resource;
 use Filament\Actions\DeleteAction;
 use Dashed\DashedCore\Classes\Sites;
 use Filament\Forms\Components\Select;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
 use Dashed\DashedEcommerceCore\Models\Product;
@@ -84,32 +86,45 @@ class AssortmentResource extends Resource
                         ->minValue(1)
                         ->visible($isCapped)
                         ->required($isCapped),
+                    Toggle::make('include_all')
+                        ->label(__('Volledig assortiment'))
+                        ->helperText(__('Elk publiek product van de site zit erin, ook producten die er later bijkomen. Uitsluiten blijft gelden.'))
+                        ->default(false)
+                        ->live()
+                        ->columnSpanFull(),
                 ]),
+            // Verborgen bij volledig assortiment, maar wel opgeslagen: zet je de
+            // schakelaar weer uit, dan staat je eerdere keuze er nog.
             Section::make(__('Opnemen'))
                 ->description(__('Een product zit in het assortiment als het in een van deze categorieen of productgroepen valt, of los is gekozen. Een categorie neemt alles eronder mee. Alleen publieke producten van de site tellen.'))
                 ->columnSpanFull()
+                ->hidden(fn (Get $get): bool => (bool) $get('include_all'))
+                ->dehydratedWhenHidden()
                 ->schema([
-                    self::ruleSelect('include_category', __('Categorieen'), ProductCategory::class),
-                    self::ruleSelect('include_product_group', __('Productgroepen'), ProductGroup::class),
-                    self::ruleSelect('include_product', __('Losse producten'), Product::class),
+                    self::ruleSelect('include_category', __('Categorieen'), ProductCategory::class, withAddAll: true)->dehydratedWhenHidden(),
+                    self::ruleSelect('include_product_group', __('Productgroepen'), ProductGroup::class, withAddAll: true)->dehydratedWhenHidden(),
+                    self::ruleSelect('include_product', __('Losse producten'), Product::class)->dehydratedWhenHidden(),
                 ]),
             Section::make(__('Uitsluiten'))
                 ->description(__('Uitsluiten wint altijd van opnemen.'))
                 ->columnSpanFull()
                 ->schema([
-                    self::ruleSelect('exclude_category', __('Categorieen'), ProductCategory::class),
-                    self::ruleSelect('exclude_product_group', __('Productgroepen'), ProductGroup::class),
+                    self::ruleSelect('exclude_category', __('Categorieen'), ProductCategory::class, withAddAll: true),
+                    self::ruleSelect('exclude_product_group', __('Productgroepen'), ProductGroup::class, withAddAll: true),
                     self::ruleSelect('exclude_product', __('Losse producten'), Product::class),
                 ]),
         ]);
     }
 
     /**
+     * Alles toevoegen alleen bij categorieen en productgroepen: losse producten
+     * zijn er duizenden, en daarvoor is de schakelaar volledig assortiment.
+     *
      * @param  class-string  $model
      */
-    public static function ruleSelect(string $name, string $label, string $model): Select
+    public static function ruleSelect(string $name, string $label, string $model, bool $withAddAll = false): Select
     {
-        return Select::make($name)
+        $select = Select::make($name)
             ->label($label)
             ->multiple()
             ->searchable()
@@ -119,6 +134,31 @@ class AssortmentResource extends Resource
                 ->get()
                 ->mapWithKeys(fn ($record) => [$record->id => (string) $record->name])
                 ->all());
+
+        if (! $withAddAll) {
+            return $select;
+        }
+
+        return $select->hintActions([
+            Action::make('addAll')
+                ->label(__('Alles toevoegen'))
+                ->link()
+                ->action(function (Select $component, Get $get) use ($model): void {
+                    $siteId = $get('site_id') ?: Sites::getFirstSite()['id'];
+
+                    $component->state($model::query()
+                        ->whereJsonContains('site_ids', $siteId)
+                        ->orderBy('id')
+                        ->pluck('id')
+                        ->map(fn ($id) => (int) $id)
+                        ->all());
+                }),
+            Action::make('clear')
+                ->label(__('Leegmaken'))
+                ->link()
+                ->color('gray')
+                ->action(fn (Select $component) => $component->state([])),
+        ]);
     }
 
     public static function table(Table $table): Table
