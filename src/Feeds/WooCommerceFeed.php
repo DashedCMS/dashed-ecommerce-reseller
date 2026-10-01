@@ -17,6 +17,10 @@ final class WooCommerceFeed
         'Weight', 'Length', 'Width', 'Height', 'EAN',
     ];
 
+    private const TEXT_COLUMNS = ['Description', 'Short description'];
+
+    private const IMAGE_COLUMNS = ['Images'];
+
     private ?array $entries = null;
 
     public function __construct(private FeedCatalog $catalog)
@@ -28,7 +32,12 @@ final class WooCommerceFeed
      */
     public function header(): array
     {
-        $header = self::BASE;
+        // Kolommen weglaten en niet leeg laten, zie FeedCatalog::sendsTexts().
+        $omit = [
+            ...($this->catalog->sendsTexts() ? [] : self::TEXT_COLUMNS),
+            ...($this->catalog->sendsImages() ? [] : self::IMAGE_COLUMNS),
+        ];
+        $header = array_values(array_diff(self::BASE, $omit));
 
         for ($i = 1; $i <= $this->attributeCount(); $i++) {
             $header[] = "Attribute {$i} name";

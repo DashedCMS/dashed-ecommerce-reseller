@@ -21,6 +21,26 @@ final class ShopifyFeed
     /** Shopify kent maximaal drie opties per product. */
     private const MAX_OPTIONS = 3;
 
+    private const TEXT_COLUMNS = ['Body HTML'];
+
+    private const IMAGE_COLUMNS = ['Image Src'];
+
+    /**
+     * De kopregel voor deze afnemer: HEADER zonder de kolommen die hij niet
+     * wil. Weglaten en niet leeg laten, zie FeedCatalog::sendsTexts().
+     *
+     * @return list<string>
+     */
+    public static function header(FeedCatalog $catalog): array
+    {
+        $omit = [
+            ...($catalog->sendsTexts() ? [] : self::TEXT_COLUMNS),
+            ...($catalog->sendsImages() ? [] : self::IMAGE_COLUMNS),
+        ];
+
+        return array_values(array_diff(self::HEADER, $omit));
+    }
+
     /**
      * @return iterable<list<string>>
      */
@@ -28,6 +48,7 @@ final class ShopifyFeed
     {
         $entries = $catalog->entries();
         $vendor = $catalog->siteName();
+        $header = self::header($catalog);
 
         foreach ($entries as $entry) {
             // Optienamen liggen per entry vast (eerste keer dat een naam
@@ -39,7 +60,7 @@ final class ShopifyFeed
             $names = self::optionNames($entry);
 
             foreach ($entry['variants'] as $index => $variant) {
-                yield self::variantRow($entry, $variant, $index === 0, $vendor, $names);
+                yield self::variantRow($header, $entry, $variant, $index === 0, $vendor, $names);
             }
         }
 
@@ -61,7 +82,7 @@ final class ShopifyFeed
 
                 $draftHandles[$removed['handle']] = true;
 
-                yield self::row(['Handle' => $removed['handle'], 'Command' => 'UPDATE', 'Status' => 'draft']);
+                yield self::row($header, ['Handle' => $removed['handle'], 'Command' => 'UPDATE', 'Status' => 'draft']);
 
                 continue;
             }
@@ -74,7 +95,7 @@ final class ShopifyFeed
                 continue;
             }
 
-            yield self::row(['Handle' => $removed['handle'], 'Command' => 'UPDATE', 'Variant Command' => 'DELETE', 'Variant SKU' => (string) $removed['sku']]);
+            yield self::row($header, ['Handle' => $removed['handle'], 'Command' => 'UPDATE', 'Variant Command' => 'DELETE', 'Variant SKU' => (string) $removed['sku']]);
         }
     }
 
@@ -101,9 +122,10 @@ final class ShopifyFeed
     }
 
     /**
+     * @param  list<string>  $header
      * @param  list<string>  $names
      */
-    private static function variantRow(array $entry, array $variant, bool $first, string $vendor, array $names): array
+    private static function variantRow(array $header, array $entry, array $variant, bool $first, string $vendor, array $names): array
     {
         $p = $variant['product'];
 
@@ -146,7 +168,7 @@ final class ShopifyFeed
             ];
         }
 
-        return self::row($values);
+        return self::row($header, $values);
     }
 
     /**
@@ -172,9 +194,9 @@ final class ShopifyFeed
      * @param  array<string, string>  $values
      * @return list<string>
      */
-    private static function row(array $values): array
+    private static function row(array $header, array $values): array
     {
-        return array_map(fn (string $column) => (string) ($values[$column] ?? ''), self::HEADER);
+        return array_map(fn (string $column) => (string) ($values[$column] ?? ''), $header);
     }
 
     private static function money(mixed $value): string

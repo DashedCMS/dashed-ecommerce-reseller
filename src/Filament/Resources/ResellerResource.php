@@ -92,6 +92,18 @@ class ResellerResource extends Resource
                         ->label(__('Prijsgroep'))
                         ->state(fn (Get $get): string => self::priceGroupInfo($get('user_id'))),
                 ]),
+            Section::make(__('Inhoud in de feeds'))
+                ->description(__('Schrijft de afnemer zijn eigen teksten of gebruikt hij eigen afbeeldingen, zet dan het betreffende veld uit. De kolom ontbreekt dan in de feeds, zodat zijn importtool zijn eigen werk niet overschrijft. De titel gaat altijd mee, want een nieuw product heeft er een nodig.'))
+                ->columnSpanFull()
+                ->columns(2)
+                ->schema([
+                    Toggle::make('feed_texts')
+                        ->label(__('Omschrijvingen meesturen'))
+                        ->default(true),
+                    Toggle::make('feed_images')
+                        ->label(__('Afbeeldingen meesturen'))
+                        ->default(true),
+                ]),
             Section::make(__('Webhook'))
                 ->description(__('Wij sturen een ondertekend bericht naar dit adres zodra een product voor deze afnemer verandert of uit zijn assortiment gaat. Laat leeg om geen berichten te sturen.'))
                 ->columnSpanFull()

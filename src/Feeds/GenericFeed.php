@@ -101,6 +101,9 @@ final class GenericFeed
     {
         $first = $entry['variants'][0]['product'] ?? [];
 
+        // Velden die de afnemer niet wil ontbreken helemaal, net als de
+        // kolommen in de CSV's; zo kan een koppeling "niet meegestuurd" van
+        // "leeg" onderscheiden.
         return [
             'handle' => $entry['handle'],
             'name' => $entry['name'],
@@ -108,13 +111,15 @@ final class GenericFeed
             // moet dat kunnen zien zonder het aantal varianten te tellen, want
             // een groep met één variant blijft een groep (zie FeedCatalog).
             'grouped' => $entry['group_id'] !== null,
-            'description' => (string) ($first['description'] ?? ''),
-            'short_description' => (string) ($first['short_description'] ?? ''),
+            ...($this->catalog->sendsTexts() ? [
+                'description' => (string) ($first['description'] ?? ''),
+                'short_description' => (string) ($first['short_description'] ?? ''),
+            ] : []),
             'categories' => array_values(array_map(
                 fn (array $category): string => (string) $category['name'],
                 (array) ($first['categories'] ?? []),
             )),
-            'images' => array_values((array) ($first['images'] ?? [])),
+            ...($this->catalog->sendsImages() ? ['images' => array_values((array) ($first['images'] ?? []))] : []),
             'variants' => array_map(fn (array $variant): array => $this->variant($variant), $entry['variants']),
         ];
     }
@@ -159,11 +164,16 @@ final class GenericFeed
         $writer->writeElement('handle', (string) $product['handle']);
         $writer->writeElement('name', (string) $product['name']);
         $writer->writeElement('grouped', $product['grouped'] ? 'true' : 'false');
-        $writer->writeElement('description', (string) $product['description']);
-        $writer->writeElement('short_description', (string) $product['short_description']);
+        if (array_key_exists('description', $product)) {
+            $writer->writeElement('description', (string) $product['description']);
+            $writer->writeElement('short_description', (string) $product['short_description']);
+        }
 
         $this->writeList($writer, 'categories', 'category', $product['categories']);
-        $this->writeList($writer, 'images', 'image', $product['images']);
+
+        if (array_key_exists('images', $product)) {
+            $this->writeList($writer, 'images', 'image', $product['images']);
+        }
 
         $writer->startElement('variants');
 

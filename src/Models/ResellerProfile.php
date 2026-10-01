@@ -43,11 +43,11 @@ class ResellerProfile extends Model
         'xml' => 'products.xml',
     ];
 
-    protected $fillable = ['user_id', 'assortment_id', 'enabled', 'webhook_subscription_id'];
+    protected $fillable = ['user_id', 'assortment_id', 'enabled', 'feed_texts', 'feed_images', 'webhook_subscription_id'];
 
-    protected $attributes = ['enabled' => false];
+    protected $attributes = ['enabled' => false, 'feed_texts' => true, 'feed_images' => true];
 
-    protected $casts = ['enabled' => 'boolean', 'feed_token' => 'encrypted'];
+    protected $casts = ['enabled' => 'boolean', 'feed_texts' => 'boolean', 'feed_images' => 'boolean', 'feed_token' => 'encrypted'];
 
     protected $hidden = ['feed_token', 'feed_token_hash'];
 

@@ -13,6 +13,7 @@ use Dashed\DashedEcommerceReseller\Models\Assortment;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Dashed\DashedEcommerceReseller\Models\ResellerProfile;
 use Dashed\DashedEcommerceReseller\Jobs\SyncResellerUserJob;
+use Dashed\DashedEcommerceReseller\Jobs\GenerateResellerFeedsJob;
 use Dashed\DashedEcommerceReseller\Jobs\SyncResellerAssortmentJob;
 use Dashed\DashedEcommerceReseller\Listeners\CatalogSyncSubscriber;
 
@@ -31,6 +32,7 @@ class DashedEcommerceResellerServiceProvider extends PackageServiceProvider
                 '2026_09_17_120200_create_reseller_catalog_items_table',
                 '2026_09_17_120300_create_reseller_api_logs_table',
                 '2026_09_22_120000_add_feed_token_to_reseller_profiles_table',
+                '2026_09_29_120000_add_feed_content_switches_to_reseller_profiles_table',
             ])
             ->runsMigrations()
             ->hasConfigFile()
@@ -86,6 +88,12 @@ class DashedEcommerceResellerServiceProvider extends PackageServiceProvider
         ResellerProfile::updated(function (ResellerProfile $profile): void {
             if ($profile->wasChanged(['enabled', 'assortment_id'])) {
                 SyncResellerUserJob::dispatch((int) $profile->user_id);
+            }
+
+            // De catalogus verandert niet, alleen wat er in het bestand
+            // staat; dus geen synchronisatie, wel nieuwe bestanden.
+            if ($profile->wasChanged(['feed_texts', 'feed_images']) && $profile->isActive()) {
+                GenerateResellerFeedsJob::dispatchFor($profile);
             }
         });
 

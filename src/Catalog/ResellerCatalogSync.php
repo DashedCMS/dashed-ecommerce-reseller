@@ -7,10 +7,10 @@ use Dashed\DashedCore\Models\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Dashed\DashedEcommerceCore\Models\Product;
-use Dashed\DashedEcommerceReseller\Jobs\GenerateResellerFeedsJob;
 use Dashed\DashedEcommerceReseller\Models\CatalogItem;
 use Dashed\DashedEcommerceReseller\Models\ResellerProfile;
 use Dashed\DashedEcommerceReseller\Webhooks\ResellerWebhooks;
+use Dashed\DashedEcommerceReseller\Jobs\GenerateResellerFeedsJob;
 
 /**
  * Houdt per afnemer bij wat hij van elk product gezien heeft (als

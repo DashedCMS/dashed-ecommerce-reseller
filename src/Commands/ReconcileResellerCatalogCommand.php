@@ -3,9 +3,9 @@
 namespace Dashed\DashedEcommerceReseller\Commands;
 
 use Illuminate\Console\Command;
+use Dashed\DashedEcommerceReseller\Models\ResellerProfile;
 use Dashed\DashedEcommerceReseller\Catalog\ResellerCatalogSync;
 use Dashed\DashedEcommerceReseller\Jobs\GenerateResellerFeedsJob;
-use Dashed\DashedEcommerceReseller\Models\ResellerProfile;
 
 class ReconcileResellerCatalogCommand extends Command
 {

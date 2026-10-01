@@ -44,7 +44,7 @@ class ResellerFeedWriter
         }
 
         [$header, $rows] = match ($format) {
-            'shopify' => [ShopifyFeed::HEADER, ShopifyFeed::rows($catalog)],
+            'shopify' => [ShopifyFeed::header($catalog), ShopifyFeed::rows($catalog)],
             'woocommerce' => (function () use ($catalog) {
                 $feed = new WooCommerceFeed($catalog);
 

@@ -7,9 +7,9 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
-use Dashed\DashedEcommerceReseller\Feeds\ResellerFeedWriter;
 use Dashed\DashedEcommerceReseller\Models\ResellerProfile;
+use Dashed\DashedEcommerceReseller\Feeds\ResellerFeedWriter;
+use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
 
 /**
  * Uniek per profiel en vertraagd: een import van honderd producten levert

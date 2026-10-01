@@ -49,6 +49,16 @@ ontbreekt de hele groep. In de Shopify-feed blijven zulke producten gewoon
 staan, want Matrixify herkent een product op Handle en optiewaarden, niet op
 SKU.
 
+Schrijf je in je eigen winkel eigen omschrijvingen of gebruik je eigen
+afbeeldingen, laat ons dan weten dat we die niet moeten meesturen. De
+kolommen `Body HTML` en `Image Src` (Shopify) en `Description`, `Short
+description` en `Images` (WooCommerce) ontbreken dan helemaal in de feed, en
+Matrixify en WP All Import laten een veld waarvan de kolom ontbreekt met rust.
+In de JSON- en XML-feed ontbreken dan de velden `description`,
+`short_description` en `images`. De titel gaat altijd mee, want een nieuw
+product heeft er een nodig; een eigen titel wordt dus bij elke import weer
+overschreven.
+
 Hernoem je een product bij ons, dan verandert de URL-slug en daarmee de
 Handle in de Shopify-feed. Matrixify herkent de nieuwe Handle niet als
 hetzelfde product en maakt in je winkel een nieuw product aan; het oude

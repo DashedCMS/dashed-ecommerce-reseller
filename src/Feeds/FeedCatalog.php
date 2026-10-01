@@ -5,9 +5,9 @@ namespace Dashed\DashedEcommerceReseller\Feeds;
 use Illuminate\Support\Collection;
 use Dashed\DashedCore\Models\Customsetting;
 use Dashed\DashedEcommerceCore\Models\Product;
-use Dashed\DashedEcommerceCore\Models\ProductFilterOption;
 use Dashed\DashedEcommerceReseller\Models\CatalogItem;
 use Dashed\DashedEcommerceReseller\Catalog\ContextScope;
+use Dashed\DashedEcommerceCore\Models\ProductFilterOption;
 use Dashed\DashedEcommerceReseller\Models\ResellerProfile;
 use Dashed\DashedEcommerceReseller\Catalog\ProductPresenter;
 
@@ -42,6 +42,23 @@ class FeedCatalog
     public function locale(): string
     {
         return $this->locale;
+    }
+
+    /**
+     * Of de omschrijvingen in de feed staan. Uit betekent: de kolom ontbreekt
+     * helemaal. Matrixify wist een veld waarvan de kolom er wel staat met een
+     * lege cel, en alleen een ontbrekende kolom laat de eigen tekst van de
+     * afnemer met rust. De titel gaat altijd mee: een nieuw product heeft er
+     * een nodig.
+     */
+    public function sendsTexts(): bool
+    {
+        return (bool) $this->profile->feed_texts;
+    }
+
+    public function sendsImages(): bool
+    {
+        return (bool) $this->profile->feed_images;
     }
 
     public function siteName(): string
