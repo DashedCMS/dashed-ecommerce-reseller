@@ -97,7 +97,7 @@
     "Liever een bestand inlezen dan de API aanroepen? Het hele assortiment staat ook klaar als JSON (:json) en als XML (:xml). Dezelfde gegevens, geen sleutel nodig, elke paar uur bijgewerkt.": "Rather import a file than call the API? The entire assortment is also available as JSON (:json) and as XML (:xml). The same data, no key needed, updated every few hours.",
     "Losse producten": "Individual products",
     "Meer voorraad dan dit ziet de afnemer als dit aantal.": "The reseller sees this number for any stock above it.",
-    "Met deze links zet de afnemer ons assortiment zelf in zijn winkel. De twee CSV-feeds zijn voor Shopify en WooCommerce, de JSON- en XML-feed zijn voor een eigen koppeling. Stuur hem de uitleg met de knop Installatiemail sturen.": "With these links the reseller adds our assortment to their own store. The two CSV feeds are for Shopify and WooCommerce, the JSON and XML feeds are for a custom integration. Send them the instructions with the Send installation email button.",
+    "Met deze links zet de afnemer ons assortiment zelf in zijn winkel. De twee CSV-feeds zijn voor Shopify en WooCommerce, de JSON- en XML-feed zijn voor een eigen koppeling. Stuur hem de uitleg met de knop Installatiemail sturen.": "With these links the reseller adds our assortment to their own store. The two CSV feeds are for Shopify and WooCommerce, the JSON and XML feeds are for a custom integration. Send them the instructions with the Send setup email button.",
     "Methode": "Method",
     "Naam": "Name",
     "Naam van de sleutel": "Key name",
