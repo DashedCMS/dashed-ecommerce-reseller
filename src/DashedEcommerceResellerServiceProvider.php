@@ -23,6 +23,7 @@ class DashedEcommerceResellerServiceProvider extends PackageServiceProvider
     {
         $package
             ->name('dashed-ecommerce-reseller')
+            ->hasTranslations()
             // Volgorde telt niet, de bestandsnamen wel: de migrator sorteert
             // op naam, en profielen verwijzen naar assortimenten en naar de
             // webhooktabel van dashed-core (2026_09_17_11xxxx).
