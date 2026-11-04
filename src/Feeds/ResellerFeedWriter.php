@@ -16,6 +16,11 @@ class ResellerFeedWriter
 {
     public function write(ResellerProfile $profile): void
     {
+        // Verwijderde producten die de afnemer al heeft opgehaald gaan niet
+        // nog een keer mee; het moment van opbouwen wordt de volgende grens.
+        $profile->advanceRemovedCutoff();
+        $catalogAt = now();
+
         // Eén catalogus voor alle formaten. Het opbouwen is het dure deel
         // (per product prijs, voorraad en kenmerken), en per formaat opnieuw
         // doen betekende vier keer hetzelfde werk binnen de timeout van
@@ -25,6 +30,8 @@ class ResellerFeedWriter
         foreach (ResellerProfile::FEED_FORMATS as $format) {
             $this->writeFormat($profile, $format, $catalog);
         }
+
+        $profile->recordFeedWritten($catalogAt);
     }
 
     public function writeFormat(ResellerProfile $profile, string $format, ?FeedCatalog $catalog = null): void

@@ -1,5 +1,10 @@
 # Changelog
 
+## v4.6.0 - 2026-11-04
+
+### Fixed
+- **Een verwijderd product werd bij elke ophaling opnieuw op concept gezet.** `FeedCatalog::removed()` nam elk product dat uit het assortiment viel 30 dagen lang (`retention.removed_items_days`) in elke feed mee, en de Shopify-feed schrijft daar `UPDATE, Status = draft` voor. Matrixify haalt de feed elk uur op, dus een afnemer die zo'n product zelf weer actief zette, zag het een uur later weer op concept staan (lovora, Dytah, 4 november 2026). Nu gaat de melding mee totdat de afnemer een feed heeft opgehaald waar ze in stond: `ResellerProfile` onthoudt wanneer de catalogus is opgebouwd en wanneer de bestanden klaarstonden (`feed_catalog_at`, `feed_written_at`), en bij de volgende generatie schuift `removed_cutoff_at` op naar het opbouwmoment zodra de ophaallog een geslaagde ophaling van na dat moment kent. Geldt voor alle formaten; de bewaartermijn van 30 dagen blijft de buitengrens.
+
 ## v4.2.1 - 2026-09-24
 
 ### Fixed

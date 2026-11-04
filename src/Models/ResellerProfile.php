@@ -47,7 +47,15 @@ class ResellerProfile extends Model
 
     protected $attributes = ['enabled' => false, 'feed_texts' => true, 'feed_images' => true];
 
-    protected $casts = ['enabled' => 'boolean', 'feed_texts' => 'boolean', 'feed_images' => 'boolean', 'feed_token' => 'encrypted'];
+    protected $casts = [
+        'enabled' => 'boolean',
+        'feed_texts' => 'boolean',
+        'feed_images' => 'boolean',
+        'feed_token' => 'encrypted',
+        'feed_catalog_at' => 'datetime',
+        'feed_written_at' => 'datetime',
+        'removed_cutoff_at' => 'datetime',
+    ];
 
     protected $hidden = ['feed_token', 'feed_token_hash'];
 
@@ -233,6 +241,44 @@ class ResellerProfile extends Model
     public function feedPath(string $format): string
     {
         return 'reseller-feeds/'.$this->id.'/'.self::feedFile($format);
+    }
+
+    /**
+     * Een product dat uit het assortiment viel staat als verwijderd in de feed
+     * (Matrixify: status draft) totdat de afnemer een feed heeft opgehaald
+     * waar die regel in stond; daarna laat de feed het product met rust.
+     * Matrixify en WP All Import voeren elke import opnieuw uit, en een
+     * regel die het product bij elke ophaling weer op concept zet, maakte
+     * het de afnemer onmogelijk om het zelf actief te houden (lovora,
+     * 4 november 2026: ophaling elk uur, 30 dagen lang).
+     *
+     * De grens schuift pas op als er sinds het klaarstaan van de vorige
+     * bestanden een geslaagde ophaling was, en dan naar het moment waarop
+     * de catalogus van die bestanden is opgebouwd: alles wat daarna
+     * verwijderd is, zat er nog niet in en gaat nog een keer mee.
+     */
+    public function advanceRemovedCutoff(): void
+    {
+        if ($this->feed_catalog_at === null || $this->feed_written_at === null) {
+            return;
+        }
+
+        $delivered = ApiLog::query()
+            ->where('user_id', $this->user_id)
+            ->where('path', 'like', '/reseller-feed/%')
+            ->where('status', 200)
+            ->where('created_at', '>=', $this->feed_written_at)
+            ->exists();
+
+        if ($delivered) {
+            $this->forceFill(['removed_cutoff_at' => $this->feed_catalog_at])->saveQuietly();
+        }
+    }
+
+    /** Na het schrijven van alle formaten: de catalogus van dit moment staat nu klaar voor de afnemer. */
+    public function recordFeedWritten(Carbon $catalogAt): void
+    {
+        $this->forceFill(['feed_catalog_at' => $catalogAt, 'feed_written_at' => now()])->saveQuietly();
     }
 
     public function feedGeneratedAt(string $format): ?Carbon

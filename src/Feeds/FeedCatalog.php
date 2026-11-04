@@ -131,7 +131,8 @@ class FeedCatalog
 
     /**
      * Producten die de afnemer eerder zag en die uit zijn assortiment vielen,
-     * zolang de bewaartermijn van de catalogus ze nog kent.
+     * zolang de bewaartermijn van de catalogus ze nog kent en de afnemer de
+     * melding nog niet heeft opgehaald (ResellerProfile::advanceRemovedCutoff()).
      *
      * @return list<array{handle: string, sku: ?string, whole_product: bool}>
      */
@@ -140,6 +141,7 @@ class FeedCatalog
         $ids = CatalogItem::query()
             ->where('user_id', $this->profile->user_id)
             ->whereNotNull('removed_at')
+            ->when($this->profile->removed_cutoff_at, fn ($query, $cutoff) => $query->where('removed_at', '>=', $cutoff))
             ->pluck('product_id');
 
         // Product gebruikt SoftDeletes: een verwijderd product moet hier nog
