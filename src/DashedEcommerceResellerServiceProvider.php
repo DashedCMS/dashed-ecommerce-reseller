@@ -108,7 +108,7 @@ class DashedEcommerceResellerServiceProvider extends PackageServiceProvider
         $this->app->booted(function (): void {
             app(Schedule::class)
                 ->command('reseller:reconcile')
-                ->dailyAt('03:00')
+                ->dailyAt(class_exists(\Dashed\DashedCore\Classes\ScheduleSpread::class) ? \Dashed\DashedCore\Classes\ScheduleSpread::at('03:00', 'reseller-reconcile') : '03:00')
                 ->withoutOverlapping();
         });
 

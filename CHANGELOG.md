@@ -1,5 +1,10 @@
 # Changelog
 
+## v4.6.1 - 2026-11-06
+
+### Changed
+- Geplande taken starten op een vast eigen tijdstip per site (`ScheduleSpread`), met de oude tijd op een oudere core.
+
 ## v4.6.0 - 2026-11-04
 
 ### Fixed
