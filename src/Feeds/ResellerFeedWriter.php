@@ -14,7 +14,11 @@ use Dashed\DashedEcommerceReseller\Models\ResellerProfile;
  */
 class ResellerFeedWriter
 {
-    public function write(ResellerProfile $profile): void
+    /**
+     * @param  callable(): void|null  $afterStep  Called after the catalog is built and after each format
+     *                                            (1 + count(ResellerProfile::FEED_FORMATS) steps).
+     */
+    public function write(ResellerProfile $profile, ?callable $afterStep = null): void
     {
         // Verwijderde producten die de afnemer al heeft opgehaald gaan niet
         // nog een keer mee; het moment van opbouwen wordt de volgende grens.
@@ -27,8 +31,16 @@ class ResellerFeedWriter
         // GenerateResellerFeedsJob.
         $catalog = FeedCatalog::for($profile);
 
+        if ($afterStep) {
+            $afterStep();
+        }
+
         foreach (ResellerProfile::FEED_FORMATS as $format) {
             $this->writeFormat($profile, $format, $catalog);
+
+            if ($afterStep) {
+                $afterStep();
+            }
         }
 
         $profile->recordFeedWritten($catalogAt);

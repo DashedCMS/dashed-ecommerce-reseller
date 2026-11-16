@@ -128,7 +128,9 @@ class EditReseller extends EditRecord
                     // vertraging, want de beheerder wacht erop. Wacht er al
                     // een generatie voor dit profiel, dan laat de unieke lock
                     // deze vallen; die ene wachtende doet dan hetzelfde werk.
-                    GenerateResellerFeedsJob::dispatch($this->record->id);
+                    // Met de beheerder erbij: die krijgt een eigen taak in het
+                    // takenicoon, met een melding als de feeds klaar zijn.
+                    GenerateResellerFeedsJob::dispatch($this->record->id, auth()->id() ? (int) auth()->id() : null);
 
                     Notification::make()
                         ->title(__('Feeds worden vernieuwd'))

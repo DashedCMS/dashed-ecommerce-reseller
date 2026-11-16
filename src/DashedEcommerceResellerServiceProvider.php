@@ -35,6 +35,7 @@ class DashedEcommerceResellerServiceProvider extends PackageServiceProvider
                 '2026_09_22_120000_add_feed_token_to_reseller_profiles_table',
                 '2026_09_29_120000_add_feed_content_switches_to_reseller_profiles_table',
                 '2026_10_01_120000_add_include_all_to_reseller_assortments_table',
+                '2026_11_04_120000_add_feed_delivery_columns_to_reseller_profiles_table',
             ])
             ->runsMigrations()
             ->hasConfigFile()

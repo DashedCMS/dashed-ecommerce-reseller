@@ -113,13 +113,20 @@ class ResellerCatalogSync
             ->each(fn (ResellerProfile $profile) => $this->syncProfile($profile));
     }
 
-    public function reconcile(): int
+    /**
+     * @param  callable(ResellerProfile): void|null  $afterProfile  Called after each reconciled profile.
+     */
+    public function reconcile(?callable $afterProfile = null): int
     {
         $count = 0;
 
-        ResellerProfile::query()->active()->with(self::RELATIONS)->each(function (ResellerProfile $profile) use (&$count) {
+        ResellerProfile::query()->active()->with(self::RELATIONS)->each(function (ResellerProfile $profile) use (&$count, $afterProfile) {
             $this->syncProfile($profile);
             $count++;
+
+            if ($afterProfile) {
+                $afterProfile($profile);
+            }
         });
 
         Cache::forever(self::LAST_RECONCILE_KEY, now()->toIso8601String());

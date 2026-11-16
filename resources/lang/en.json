@@ -175,5 +175,10 @@
     "Zet bij \"Schedule\" een herhaling, bijvoorbeeld elke 4 uur. Dan kloppen prijzen en voorraad in je winkel steeds met die van ons.": "Set a repeat under \"Schedule\", for example every 4 hours. That way prices and stock in your store always match ours.",
     "Zo lang ziet een afnemer via \"gewijzigd sinds\" nog dat een product weg is. Een koppeling die minder vaak ophaalt mist die melding. Standaard: 30 dagen.": "This is how long a reseller still sees via \"changed since\" that a product is gone. An integration that fetches less often misses that notice. Default: 30 days.",
     "Zo zet je ons assortiment in je Shopify-winkel": "How to add our product range to your Shopify store",
-    "Zo zet je ons assortiment in je WooCommerce-winkel": "How to add our product range to your WooCommerce store"
+    "Zo zet je ons assortiment in je WooCommerce-winkel": "How to add our product range to your WooCommerce store",
+    "Feeds van afnemer bijwerken: :naam": "Updating reseller feeds: :naam",
+    "De feeds zijn bijgewerkt.": "The feeds have been updated.",
+    "Afnemer bekijken": "View reseller",
+    "Catalogus van afnemers afstemmen": "Reconciling reseller catalogs",
+    ":aantal afnemers afgestemd.": ":aantal resellers reconciled."
 }

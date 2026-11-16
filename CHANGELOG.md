@@ -1,5 +1,13 @@
 # Changelog
 
+## v4.7.0 - 2026-11-16
+
+### Added
+- Het taakcentrum (het tabje Bezig) toont nu de nachtelijke afstemming van de catalogus en het klaarzetten van de feeds (één dagregel per afnemer, een handmatige start als eigen taak).
+
+### Fixed
+- De migratie `add_feed_delivery_columns_to_reseller_profiles_table` (4 november) stond niet in de lijst van het pakket en draaide daardoor nooit. Draai `php artisan migrate`.
+
 ## v4.6.1 - 2026-11-06
 
 ### Changed
